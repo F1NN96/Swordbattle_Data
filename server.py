@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Query, RedirectResponse
+from fastapi import FastAPI, Query
+from starlette.responses import RedirectResponse
 import requests
 import time
 from fastapi.middleware.cors import CORSMiddleware
