@@ -130,7 +130,7 @@
   async function loadPlayers() {
     const timeRange = document.getElementById("playersTimeRange").value;
     try {
-        const res = await fetch(`http://127.0.0.1:8000/stats/fetch?timeRange=${timeRange}&sortBy=xp`, {
+        const res = await fetch(`http://swordbattle-data.onrender.com/stats/fetch?timeRange=${timeRange}&sortBy=xp`, {
             method: "POST"
         });
         const data = await res.json();
@@ -175,7 +175,7 @@
   async function loadGames() {
     const timeRange = document.getElementById("gamesTimeRange").value;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/games/fetch?timeRange=${timeRange}`, { method: "POST" });
+      const res = await fetch(`http://swordbattle-data.onrender.com/games/fetch?timeRange=${timeRange}`, { method: "POST" });
       gamesData = await res.json();
       updateGamesLeaderboard();
     } catch(err) { console.error("Failed to load games:", err); }
