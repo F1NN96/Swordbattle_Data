@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, RedirectResponse
 import requests
 import time
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +17,7 @@ app.add_middleware(
 # Root route for testing
 @app.get("/")
 def root():
-    return {"message": "FastAPI is alive!"}
+    return RedirectResponse("/stats/fetch")
 
 
 # ---------- Players Stats ----------
@@ -29,7 +29,7 @@ def fetch_stats(timeRange: str = Query("all"), sortBy: str = Query("xp")):
         "sortBy": sortBy,
         "timeRange": timeRange,
         "limit": 100,
-        "secret": "3c3737da-bdc0-43e7-a5d6-cc020092b832"
+        "secret": os.environ.get("SWORD_SECRET")
     }
     response = requests.post(url, params={"_": timestamp_ms}, json=payload)
     return response.json()
@@ -44,7 +44,7 @@ def fetch_games(timeRange: str = Query("all")):
         "sortBy": "coins",
         "timeRange": timeRange,
         "limit": 500,
-        "secret": "3c3737da-bdc0-43e7-a5d6-cc020092b832"
+        "secret": os.environ.get("SWORD_SECRET")
     }
     response = requests.post(url, params={"_": timestamp_ms}, json=payload)
     return response.json()
@@ -58,7 +58,7 @@ def search_profile(q: str = Query(""), limit: int = Query(25)):
     payload = {
         "q": q,
         "limit": limit,
-        "secret": "3c3737da-bdc0-43e7-a5d6-cc020092b832"
+        "secret": os.environ.get("SWORD_SECRET")
     }
     response = requests.post(url, params={"_": timestamp_ms}, json=payload)
     return response.json()
