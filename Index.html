@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Swordbattle.io Leaderboards</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #111; color: #eee; padding: 20px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+  th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+  th { background: #222; cursor: pointer; }
+  tr:nth-child(even) { background: #1a1a1a; }
+  select { margin-left: 20px; padding: 4px; }
+  h1 { margin-top: 20px; }
+  .tabs { margin-top: 20px; }
+  .tab-button { background: #222; color: #eee; border: none; padding: 10px 20px; cursor: pointer; margin-right: 5px; }
+  .tab-button.active { background: #555; }
+  .tab-content { display: none; margin-top: 20px; }
+  .tab-content.active { display: block; }
+  .slider-container { margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1>Swordbattle.io Leaderboards</h1>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab-button active" data-tab="playersTab">Players</button>
+  <button class="tab-button" data-tab="gamesTab">Games</button>
+  <button class="tab-button" data-tab="searchTab">Search Player</button>
+</div>
+
+<!-- Players Tab -->
+<div id="playersTab" class="tab-content active">
+  <label>Time Range:
+    <select id="playersTimeRange">
+      <option value="all">All Time</option>
+      <option value="day">Today</option>
+      <option value="week">This Week</option>
+      <option value="month">This Month</option>
+    </select>
+  </label>
+
+  <p>*Click headers to sort leaderboard</p>
+  <table id="playersLeaderboard">
+    <thead>
+      <tr>
+        <th>Place</th>
+        <th onclick="sortTable(1)">Username</th>
+        <th onclick="sortTable(2)">XP</th>
+        <th onclick="sortTable(3)">Playtime</th>
+        <th onclick="sortTable(4)">Coins</th>
+        <th onclick="sortTable(5)">Kills</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- Games Tab -->
+<div id="gamesTab" class="tab-content">
+  <label>Time Range:
+    <select id="gamesTimeRange">
+      <option value="all">All Time</option>
+      <option value="day">Today</option>
+      <option value="week">This Week</option>
+      <option value="month">This Month</option>
+    </select>
+  </label>
+
+  <div class="slider-container">
+    <label>Max runs per player: <span id="sliderValue">5</span></label>
+    <input type="range" id="maxRunsSlider" min="1" max="11" value="5">
+    <span>(11 = All Runs)</span>
+  </div>
+
+  <table id="gamesLeaderboard">
+    <thead>
+      <tr>
+        <th>Place</th>
+        <th onclick="sortGamesTable(1)">Username</th>
+        <th onclick="sortGamesTable(2)">Coins</th>
+        <th onclick="sortGamesTable(3)">Kills</th>
+        <th onclick="sortGamesTable(4)">Playtime</th>
+        <th onclick="sortGamesTable(5)">Date</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- Search Player Tab -->
+<div id="searchTab" class="tab-content">
+    <label>Search Player:
+        <input type="text" id="playerSearchInput" placeholder="Enter username">
+        <button id="playerSearchBtn">Search</button>
+    </label>
+    <div id="playerProfileDisplay" style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;"></div>
+</div>
+
+<style>
+    .player-card {
+        background: #1a1a1a;
+        border: 1px solid #444;
+        padding: 15px;
+        border-radius: 8px;
+    }
+    .player-card p {
+        margin: 8px 0;
+    }
+    .player-card strong {
+        color: #fff;
+    }
+</style>
+
+<script>
+  // ---------- Tab switching ----------
+  const tabButtons = document.querySelectorAll(".tab-button");
+  const tabContents = document.querySelectorAll(".tab-content");
+  tabButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      tabButtons.forEach(b => b.classList.remove("active"));
+      tabContents.forEach(c => c.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  // ---------- Players Leaderboard ----------
+  async function loadPlayers() {
+    const timeRange = document.getElementById("playersTimeRange").value;
+    try {
+        const res = await fetch(`http://127.0.0.1:8000/stats/fetch?timeRange=${timeRange}&sortBy=xp`, {
+            method: "POST"
+        });
+        const data = await res.json();
+        const tbody = document.querySelector("#playersLeaderboard tbody");
+        tbody.innerHTML = "";
+        data.forEach(player => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td></td>
+                <td>${player.username}</td>
+                <td>${player.xp}</td>
+                <td>${formatHMS(player.playtime)}</td>
+                <td>${player.coins}</td>
+                <td>${player.kills}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        assignPlaces("playersLeaderboard");
+    } catch(err) {
+        console.error("Failed to load players:", err);
+    }
+  }
+
+
+  function sortTable(colIndex) {
+    const table = document.getElementById("playersLeaderboard");
+    const rows = Array.from(table.rows).slice(1);
+    const isNumeric = colIndex > 1 && colIndex <= 5; 
+    rows.sort((a,b) => {
+      let aVal = a.cells[colIndex].innerText;
+      let bVal = b.cells[colIndex].innerText;
+      if (colIndex === 3) { aVal = parseHMS(aVal); bVal = parseHMS(bVal); }
+      else if (isNumeric) { aVal = parseFloat(aVal); bVal = parseFloat(bVal); }
+      return bVal - aVal;
+    });
+    rows.forEach((row,index) => { row.cells[0].innerText = `#${index+1}`; table.appendChild(row); });
+  }
+
+  // ---------- Games Leaderboard ----------
+  let gamesData = [];
+
+  async function loadGames() {
+    const timeRange = document.getElementById("gamesTimeRange").value;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/games/fetch?timeRange=${timeRange}`, { method: "POST" });
+      gamesData = await res.json();
+      updateGamesLeaderboard();
+    } catch(err) { console.error("Failed to load games:", err); }
+  }
+
+  function updateGamesLeaderboard() {
+    const tbody = document.querySelector("#gamesLeaderboard tbody");
+    tbody.innerHTML = "";
+    const maxRuns = parseInt(document.getElementById("maxRunsSlider").value);
+    const runsByPlayer = {};
+
+    gamesData.forEach(game => {
+      const username = game.username;
+      if (!(username in runsByPlayer)) runsByPlayer[username] = 0;
+
+      if (maxRuns === 11 || runsByPlayer[username] < maxRuns) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td></td>
+          <td>${game.username}</td>
+          <td>${game.coins}</td>
+          <td>${game.kills}</td>
+          <td>${formatHMS(game.playtime)}</td>
+          <td>${new Date(game.date).toLocaleString()}</td>
+        `;
+        tbody.appendChild(row);
+        runsByPlayer[username]++;
+      }
+    });
+    assignPlaces("gamesLeaderboard");
+  }
+
+  function sortGamesTable(colIndex) {
+    const table = document.getElementById("gamesLeaderboard");
+    const rows = Array.from(table.rows).slice(1);
+    const isNumeric = colIndex > 1 && colIndex <= 4;
+    rows.sort((a,b) => {
+      let aVal = a.cells[colIndex].innerText;
+      let bVal = b.cells[colIndex].innerText;
+      if (colIndex === 4) { aVal = parseHMS(aVal); bVal = parseHMS(bVal); }
+      else if (isNumeric) { aVal = parseFloat(aVal); bVal = parseFloat(bVal); }
+      return bVal - aVal;
+    });
+    rows.forEach((row,index) => { row.cells[0].innerText = `#${index+1}`; table.appendChild(row); });
+  }
+
+  // ---------- Helpers ----------
+  function assignPlaces(tableId) {
+    const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+    rows.forEach((row,index) => { row.cells[0].innerText = `#${index+1}`; });
+  }
+
+  function formatHMS(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600)/60);
+    const s = seconds % 60;
+    return `${h}h ${m}m ${s}s`;
+  }
+
+  function parseHMS(hms) {
+    const match = hms.match(/(\d+)h (\d+)m (\d+)s/);
+    if (!match) return 0;
+    return parseInt(match[1])*3600 + parseInt(match[2])*60 + parseInt(match[3]);
+  }
+
+document.getElementById("playerSearchBtn").addEventListener("click", async () => {
+    const username = document.getElementById("playerSearchInput").value.trim();
+    if (!username) {
+        document.getElementById("playerProfileDisplay").innerText = "Please enter a username.";
+        return;
+    }
+
+    try {
+        const res = await fetch(`https://api.swordbattle.io/profile/getPublicUserInfo/${encodeURIComponent(username)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        });
+        if (!res.ok) throw new Error("API response not ok");
+        const data = await res.json();
+        const player = data.account || {};
+        const stats = data.totalStats || {};
+        
+        if (!player || !player.username) {
+            document.getElementById("playerProfileDisplay").innerText = "Player not found.";
+            return;
+        }
+
+        const skinsInfo = player.skins && player.skins.equipped ? `<p><strong>Equipped Skin:</strong> ${player.skins.equipped}</p><p><strong>Owned Skins:</strong> ${player.skins.owned ? player.skins.owned.length : 0}</p>` : "";
+        document.getElementById("playerProfileDisplay").innerHTML = `
+            <p><strong>Username:</strong> ${player.username || "N/A"}</p>
+            <p><strong>Clan:</strong> ${player.clan || "N/A"}</p>
+            <p><strong>XP:</strong> ${stats.xp || 0}</p>
+            <p><strong>Mastery:</strong> ${stats.mastery || 0}</p>
+            <p><strong>Coins:</strong> ${stats.coins || 0}</p>
+            <p><strong>Kills:</strong> ${stats.kills || 0}</p>
+            <p><strong>Games:</strong> ${stats.games || 0}</p>
+            <p><strong>Playtime:</strong> ${formatHMS(stats.playtime || 0)}</p>
+            <p><strong>Gems:</strong> ${player.gems || 0}</p>
+            <p><strong>Created At:</strong> ${player.created_at ? new Date(player.created_at).toLocaleString() : "N/A"}</p>
+            ${skinsInfo}
+        `;
+    } catch(err) {
+        console.error(err);
+        document.getElementById("playerProfileDisplay").innerText = "Failed to load profile. Please try again.";
+    }
+});
+
+  // ---------- Event listeners ----------
+  document.getElementById("playersTimeRange").addEventListener("change", loadPlayers);
+  document.getElementById("gamesTimeRange").addEventListener("change", loadGames);
+  document.getElementById("maxRunsSlider").addEventListener("input", () => {
+    document.getElementById("sliderValue").innerText = document.getElementById("maxRunsSlider").value === "11" ? "All" : document.getElementById("maxRunsSlider").value;
+    updateGamesLeaderboard();
+  });
+
+  // Initial load
+  loadPlayers();
+  loadGames();
+</script>
+</body>
+</html>
