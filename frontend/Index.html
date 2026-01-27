@@ -249,7 +249,7 @@ document.getElementById("playerSearchBtn").addEventListener("click", async () =>
     }
 
     try {
-        const res = await fetch(`https://api.swordbattle.io/profile/getPublicUserInfo/${encodeURIComponent(username)}`, {
+        const res = await fetch(`https://swordbattle-data.onrender.com/profile/getPublicUserInfo/${encodeURIComponent(username)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" }
         });

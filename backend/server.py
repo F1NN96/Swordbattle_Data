@@ -24,7 +24,15 @@ app.add_middleware(
 # Root route for testing
 @app.get("/")
 def root():
-    return RedirectResponse("/stats/fetch")
+    return {
+        "status": "ok",
+        "endpoints": [
+            "/stats/fetch",
+            "/games/fetch",
+            "/profile/search",
+            "/profile/getPublicUserInfo/{username}"
+        ]
+    }
 
 
 # ---------- Players Stats ----------
@@ -80,3 +88,14 @@ def search_profile(q: str = Query(""), limit: int = Query(25)):
 @app.get("/profile/search")
 def search_profile_get(q: str = Query(""), limit: int = Query(25)): 
     return search_profile(q, limit)
+
+@app.post("/profile/getPublicUserInfo/{username}")
+def get_public_profile(username: str):
+    timestamp_ms = int(time.time() * 1000)
+    url = f"https://api.swordbattle.io/profile/getPublicUserInfo/{username}"
+    response = requests.post(url, params={"_": timestamp_ms})
+    return response.json()
+
+@app.get("/profile/getPublicUserInfo/{username}")
+def get_public_profile_get(username: str):
+    return get_public_profile(username)
