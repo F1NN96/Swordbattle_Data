@@ -35,6 +35,9 @@ def fetch_stats(timeRange: str = Query("all"), sortBy: str = Query("xp")):
     response = requests.post(url, params={"_": timestamp_ms}, json=payload)
     return response.json()
 
+@app.get("/stats/fetch")
+def fetch_stats_get(timeRange: str = Query("all"), sortBy: str = Query("xp")):
+    return fetch_stats(timeRange, sortBy)
 
 # ---------- Games Stats ----------
 @app.post("/games/fetch")
@@ -50,6 +53,10 @@ def fetch_games(timeRange: str = Query("all")):
     response = requests.post(url, params={"_": timestamp_ms}, json=payload)
     return response.json()
 
+@app.get("/games/fetch")
+def fetch_games_get(timeRange: str = Query("all")):
+    return fetch_games(timeRange)
+
 
 # ---------- Profile Search ----------
 @app.post("/profile/search")
@@ -63,3 +70,7 @@ def search_profile(q: str = Query(""), limit: int = Query(25)):
     }
     response = requests.post(url, params={"_": timestamp_ms}, json=payload)
     return response.json()
+
+@app.get("/profile/search")
+def search_profile_get(q: str = Query(""), limit: int = Query(25)): 
+    return search_profile(q, limit)
