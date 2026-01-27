@@ -8,6 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 # Create FastAPI app
 app = FastAPI()
 
+# Make "SWORD_SECRET"
+secret = os.environ.get("SWORD_SECRET")
+if not secret:
+    raise EnvironmentError("SWORD_SECRET environment variable not set.")
+
 # Allow frontend to access this API (CORS)
 app.add_middleware(
     CORSMiddleware,
@@ -31,7 +36,7 @@ def fetch_stats(timeRange: str = Query("all"), sortBy: str = Query("xp")):
         "sortBy": sortBy,
         "timeRange": timeRange,
         "limit": 100,
-        "secret": os.environ.get("SWORD_SECRET")
+        "secret": secret
     }
     response = requests.post(url, params={"_": timestamp_ms}, json=payload)
     return response.json()
@@ -49,7 +54,7 @@ def fetch_games(timeRange: str = Query("all")):
         "sortBy": "coins",
         "timeRange": timeRange,
         "limit": 500,
-        "secret": os.environ.get("SWORD_SECRET")
+        "secret": secret
     }
     response = requests.post(url, params={"_": timestamp_ms}, json=payload)
     return response.json()
@@ -67,7 +72,7 @@ def search_profile(q: str = Query(""), limit: int = Query(25)):
     payload = {
         "q": q,
         "limit": limit,
-        "secret": os.environ.get("SWORD_SECRET")
+        "secret": secret
     }
     response = requests.post(url, params={"_": timestamp_ms}, json=payload)
     return response.json()
