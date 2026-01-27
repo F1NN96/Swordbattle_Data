@@ -2,6 +2,7 @@ from fastapi import FastAPI, Query
 from starlette.responses import RedirectResponse
 import requests
 import time
+import os
 from fastapi.middleware.cors import CORSMiddleware
 
 # Create FastAPI app
