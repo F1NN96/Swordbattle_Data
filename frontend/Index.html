@@ -130,7 +130,7 @@
   async function loadPlayers() {
     const timeRange = document.getElementById("playersTimeRange").value;
     try {
-        const res = await fetch(`http://swordbattle-data.onrender.com/stats/fetch?timeRange=${timeRange}&sortBy=xp`, {
+        const res = await fetch(`https://swordbattle-data.onrender.com/stats/fetch?timeRange=${timeRange}&sortBy=xp`, {
             method: "POST"
         });
         const data = await res.json();
@@ -175,7 +175,7 @@
   async function loadGames() {
     const timeRange = document.getElementById("gamesTimeRange").value;
     try {
-      const res = await fetch(`http://swordbattle-data.onrender.com/games/fetch?timeRange=${timeRange}`, { method: "POST" });
+      const res = await fetch(`https://swordbattle-data.onrender.com/games/fetch?timeRange=${timeRange}`, { method: "POST" });
       gamesData = await res.json();
       updateGamesLeaderboard();
     } catch(err) { console.error("Failed to load games:", err); }
@@ -265,17 +265,19 @@ document.getElementById("playerSearchBtn").addEventListener("click", async () =>
 
         const skinsInfo = player.skins && player.skins.equipped ? `<p><strong>Equipped Skin:</strong> ${player.skins.equipped}</p><p><strong>Owned Skins:</strong> ${player.skins.owned ? player.skins.owned.length : 0}</p>` : "";
         document.getElementById("playerProfileDisplay").innerHTML = `
-            <p><strong>Username:</strong> ${player.username || "N/A"}</p>
-            <p><strong>Clan:</strong> ${player.clan || "N/A"}</p>
-            <p><strong>XP:</strong> ${stats.xp || 0}</p>
-            <p><strong>Mastery:</strong> ${stats.mastery || 0}</p>
-            <p><strong>Coins:</strong> ${stats.coins || 0}</p>
-            <p><strong>Kills:</strong> ${stats.kills || 0}</p>
-            <p><strong>Games:</strong> ${stats.games || 0}</p>
-            <p><strong>Playtime:</strong> ${formatHMS(stats.playtime || 0)}</p>
-            <p><strong>Gems:</strong> ${player.gems || 0}</p>
-            <p><strong>Created At:</strong> ${player.created_at ? new Date(player.created_at).toLocaleString() : "N/A"}</p>
-            ${skinsInfo}
+            <div class="player-card">
+                <p><strong>Username:</strong> ${player.username || "N/A"}</p>
+                <p><strong>Clan:</strong> ${player.clan || "N/A"}</p>
+                <p><strong>XP:</strong> ${stats.xp || 0}</p>
+                <p><strong>Mastery:</strong> ${stats.mastery || 0}</p>
+                <p><strong>Coins:</strong> ${stats.coins || 0}</p>
+                <p><strong>Kills:</strong> ${stats.kills || 0}</p>
+                <p><strong>Games:</strong> ${stats.games || 0}</p>
+                <p><strong>Playtime:</strong> ${formatHMS(stats.playtime || 0)}</p>
+                <p><strong>Gems:</strong> ${player.gems || 0}</p>
+                <p><strong>Created At:</strong> ${player.created_at ? new Date(player.created_at).toLocaleString() : "N/A"}</p>
+                ${skinsInfo}
+            </div>
         `;
     } catch(err) {
         console.error(err);
