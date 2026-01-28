@@ -99,3 +99,18 @@ def get_public_profile(username: str):
 @app.get("/profile/getPublicUserInfo/{username}")
 def get_public_profile_get(username: str):
     return get_public_profile(username)
+
+@app.post("/profile/clanMembers")
+def get_clan_members(clan: str = Query(...)):
+    timestamp_ms = int(time.time() * 1000)
+    url = "https://api.swordbattle.io/profile/clanMembers"
+    payload = {
+        "clan": clan,
+        "secret": secret
+    }
+    response = requests.post(url, params={"_": timestamp_ms}, json=payload)
+    return response.json()
+
+@app.get("/profile/clanMembers")
+def get_clan_members_get(clan: str = Query(...)):
+    return get_clan_members(clan)

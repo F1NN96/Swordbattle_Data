@@ -28,6 +28,7 @@
   <button class="tab-button active" data-tab="playersTab">Players</button>
   <button class="tab-button" data-tab="gamesTab">Games</button>
   <button class="tab-button" data-tab="searchTab">Search Player</button>
+  <button class="tab-button" data-tab="clanTab">Clan Search</button>
 </div>
 
 <!-- Players Tab -->
@@ -112,6 +113,30 @@
         color: #fff;
     }
 </style>
+
+<!-- Clan Search Tab -->
+<div id="clanTab" class="tab-content">
+  <label>
+    Clan Name:
+    <input type="text" id="clanSearchInput" placeholder="Enter clan name">
+    <button id="clanSearchBtn">Search</button>
+  </label>
+
+  <table id="clanLeaderboard">
+    <thead>
+      <tr>
+        <th>Place</th>
+        <th>Username</th>
+        <th>XP</th>
+        <th>Kills</th>
+        <th>Coins</th>
+        <th>Playtime</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
 
 <script>
   // ---------- Tab switching ----------
@@ -221,6 +246,51 @@
     });
     rows.forEach((row,index) => { row.cells[0].innerText = `#${index+1}`; table.appendChild(row); });
   }
+
+  // ---------- Clan Searching ----------
+  document.getElementById("clanSearchBtn").addEventListener("click", async () => {
+    const clan = document.getElementById("clanSearchInput").value.trim();
+    const tbody = document.querySelector("#clanLeaderboard tbody");
+    tbody.innerHTML = "";
+
+    if (!clan) {
+      tbody.innerHTML = "<tr><td colspan='6'>Enter a clan name.</td></tr>";
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `https://swordbattle-data.onrender.com/profile/clanMembers?clan=${encodeURIComponent(clan)}`,
+        { method: "POST" }
+      );
+
+      if (!res.ok) throw new Error("Request failed");
+
+      const data = await res.json();
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='6'>No members found.</td></tr>";
+        return;
+      }
+
+      data.forEach((player, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>#${index + 1}</td>
+          <td>${player.username}</td>
+          <td>${player.xp || 0}</td>
+          <td>${player.kills || 0}</td>
+          <td>${player.coins || 0}</td>
+          <td>${formatHMS(player.playtime || 0)}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    } catch (err) {
+      console.error(err);
+      tbody.innerHTML = "<tr><td colspan='6'>Failed to load clan.</td></tr>";
+    }
+  });
+
 
   // ---------- Helpers ----------
   function assignPlaces(tableId) {
