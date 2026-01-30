@@ -103,7 +103,7 @@ def get_public_profile_get(username: str):
 @app.get("/profile/clanMembers")
 def get_clan_members(clan: str = Query(...)):
     url = "https://api.swordbattle.io/profile/clanMembers"
-
+    print("Clan Request:", clan)
     response = requests.get(
         url,
         params={
@@ -112,5 +112,27 @@ def get_clan_members(clan: str = Query(...)):
         json={"clan": clan}
     )
 
-    return response.json()
+    data = response.json()
 
+    return {
+        "count": data["count"],
+        "xp": data["xp"],
+        "members": [sanitize_member(m) for m in data["members"]]
+    }
+
+
+def sanitize_member(m):
+    return {
+        "id": m["id"],
+        "username": m["username"],
+        "clan": m["clan"],
+        "xp": m["xp"],
+        "mastery": m["mastery"],
+        "gems": m["gems"],
+        "subscription": m["subscription"],
+        "profile_views": m["profile_views"],
+        "tags": m.get("tags", {}),
+        "skins": {
+            "equipped": m["skins"]["equipped"]
+        }
+    }
