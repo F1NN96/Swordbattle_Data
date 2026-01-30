@@ -108,7 +108,7 @@ def get_clan_members(clan: str = Query(...)):
         url,
         params={
             "clan": clan
-        }
+        },
         json={"clan": clan}
     )
 
