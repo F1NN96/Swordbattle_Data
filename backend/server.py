@@ -104,9 +104,13 @@ def get_public_profile_get(username: str):
 def get_clan_members(clan: str = Query(...)):
     timestamp_ms = int(time.time() * 1000)
     url = "https://api.swordbattle.io/profile/clanMembers"
-    payload = {
-        "clan": clan
-    }
-    response = requests.get(url, params={"_": timestamp_ms}, json=payload)
+
+    response = requests.get(
+        url,
+        params={
+            "clan": clan
+        }
+    )
+
     return response.json()
 
