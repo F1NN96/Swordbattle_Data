@@ -271,7 +271,7 @@
     try {
       const res = await fetch(
         `https://swordbattle-data.onrender.com/profile/clanMembers?clan=${encodeURIComponent(clan)}`,
-        { method: "POST" }
+        { method: "GET" }
       );
 
       if (!res.ok) throw new Error("Request failed");
