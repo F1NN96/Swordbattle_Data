@@ -288,6 +288,9 @@
         return;
       }
 
+      console.log("RAW clan reponse:", data);
+      console.log("Type:", typeof data, "Is array:", Array.isArray(data));
+
       data.forEach((player, index) => {
         const row = document.createElement("tr");
         row.innerHTML = `
