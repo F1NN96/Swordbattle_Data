@@ -138,9 +138,9 @@
 		    <th>Place</th>
 			  <th onclick="sortTable(1, 'clanLeaderboard')" style="cursor:pointer;">Username</th>
 			  <th onclick="sortTable(2, 'clanLeaderboard')" style="cursor:pointer;">XP</th>
-			  <th onclick="sortTable(3, 'clanLeaderboard')" style="cursor:pointer;">Kills</th>
-			  <th onclick="sortTable(4, 'clanLeaderboard')" style="cursor:pointer;">Coins</th>
-			  <th onclick="sortTable(5, 'clanLeaderboard')" style="cursor:pointer;">Playtime</th>
+			  <th onclick="sortTable(3, 'clanLeaderboard')" style="cursor:pointer;">Gems</th>
+			  <th onclick="sortTable(4, 'clanLeaderboard')" style="cursor:pointer;">Mastery</th>
+			  <th onclick="sortTable(5, 'clanLeaderboard')" style="cursor:pointer;">Profile Views</th>
 		  </tr>
 	  </thead>
 	  <tbody></tbody>
@@ -302,10 +302,10 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
       row.innerHTML = `
         <td>#${index + 1}</td>
         <td>${player.username}</td>
-        <td>${player.xp?.toLocaleString() ?? 0}</td>
-        <td>${player.kills ?? 0}</td>
-        <td>${player.coins ?? 0}</td>
-        <td>${formatHMS(player.playtime ?? 0)}</td>
+        <td>${player.xp ?? 0}</td>
+        <td>${player.gems ?? 0}</td>
+        <td>${player.mastery ?? 0}</td>
+        <td>${player.profile_views ?? 0}</td>
       `;
       tbody.appendChild(row);
     });
