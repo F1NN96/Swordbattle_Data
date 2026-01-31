@@ -54,17 +54,17 @@
 
   <p>*Click headers to sort leaderboard</p>
   <table id="playersLeaderboard">
-    <thead>
-      <tr>
-        <th>Place</th>
-        <th onclick="sortTable(1)">Username</th>
-        <th onclick="sortTable(2)">XP</th>
-        <th onclick="sortTable(3)">Playtime</th>
-        <th onclick="sortTable(4)">Coins</th>
-        <th onclick="sortTable(5)">Kills</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
+	  <thead>
+		  <tr>
+			  <th>Place</th>
+			  <th onclick="sortTable(1, 'playersLeaderboard')" style="cursor:pointer;">Username</th>
+			  <th onclick="sortTable(2, 'playersLeaderboard')" style="cursor:pointer;">XP</th>
+			  <th onclick="sortTable(3, 'playersLeaderboard')" style="cursor:pointer;">Playtime</th>
+			  <th onclick="sortTable(4, 'playersLeaderboard')" style="cursor:pointer;">Coins</th>
+			  <th onclick="sortTable(5, 'playersLeaderboard')" style="cursor:pointer;">Kills</th>
+		  </tr>
+	  </thead>
+	  <tbody></tbody>
   </table>
 </div>
 
@@ -86,17 +86,17 @@
   </div>
 
   <table id="gamesLeaderboard">
-    <thead>
-      <tr>
-        <th>Place</th>
-        <th onclick="sortGamesTable(1)">Username</th>
-        <th onclick="sortGamesTable(2)">Coins</th>
-        <th onclick="sortGamesTable(3)">Kills</th>
-        <th onclick="sortGamesTable(4)">Playtime</th>
-        <th onclick="sortGamesTable(5)">Date</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
+	  <thead>
+		  <tr>
+			  <th>Place</th>
+			  <th onclick="sortTable(1, 'gamesLeaderboard')" style="cursor:pointer;">Username</th>
+			  <th onclick="sortTable(2, 'gamesLeaderboard')" style="cursor:pointer;">Coins</th>
+			  <th onclick="sortTable(3, 'gamesLeaderboard')" style="cursor:pointer;">Kills</th>
+			  <th onclick="sortTable(4, 'gamesLeaderboard')" style="cursor:pointer;">Playtime</th>
+			  <th onclick="sortTable(5, 'gamesLeaderboard')" style="cursor:pointer;">Date</th>
+		  </tr>
+	  </thead>
+	  <tbody></tbody>
   </table>
 </div>
 
@@ -133,17 +133,17 @@
   </label>
 
   <table id="clanLeaderboard">
-    <thead>
-      <tr>
-        <th>Place</th>
-        <th>Username</th>
-        <th onclick="sortTable(2)">XP</th>
-        <th>Kills</th>
-        <th>Coins</th>
-        <th>Playtime</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
+	  <thead>
+		  <tr>
+		    <th>Place</th>
+			  <th onclick="sortTable(1, 'clanLeaderboard')" style="cursor:pointer;">Username</th>
+			  <th onclick="sortTable(2, 'clanLeaderboard')" style="cursor:pointer;">XP</th>
+			  <th onclick="sortTable(3, 'clanLeaderboard')" style="cursor:pointer;">Kills</th>
+			  <th onclick="sortTable(4, 'clanLeaderboard')" style="cursor:pointer;">Coins</th>
+			  <th onclick="sortTable(5, 'clanLeaderboard')" style="cursor:pointer;">Playtime</th>
+		  </tr>
+	  </thead>
+	  <tbody></tbody>
   </table>
 </div>
 
@@ -193,19 +193,42 @@
   }
 
 
-  function sortTable(colIndex) {
-    const table = document.getElementById("playersLeaderboard");
-    const rows = Array.from(table.rows).slice(1);
-    const isNumeric = colIndex > 1 && colIndex <= 5; 
-    rows.sort((a,b) => {
-      let aVal = a.cells[colIndex].innerText;
-      let bVal = b.cells[colIndex].innerText;
-      if (colIndex === 3) { aVal = parseHMS(aVal); bVal = parseHMS(bVal); }
-      else if (isNumeric) { aVal = parseFloat(aVal); bVal = parseFloat(bVal); }
-      return bVal - aVal;
-    });
-    rows.forEach((row,index) => { row.cells[0].innerText = `#${index+1}`; table.appendChild(row); });
-  }
+  const tableSortState = {}; // remembers asc/desc per table & column
+
+	function sortTable(colIndex, tableId) {
+		const table = document.getElementById(tableId);
+		const tbody = table.tBodies[0];
+		const rows = Array.from(tbody.rows);
+
+		// toggle sort direction per table + column
+		const key = `${tableId}-${colIndex}`;
+		tableSortState[key] = !tableSortState[key];
+		const asc = tableSortState[key];
+
+		rows.sort((a, b) => {
+			let aVal = a.cells[colIndex].innerText.trim();
+			let bVal = b.cells[colIndex].innerText.trim();
+
+			// Playtime columns (assumes last column in table)
+			if (colIndex === rows[0].cells.length - 1) {
+				aVal = parseHMS(aVal);
+				bVal = parseHMS(bVal);
+			} else {
+				// Numeric conversion (XP, Coins, Kills)
+				aVal = parseFloat(aVal.replace(/,/g, "")) || 0;
+				bVal = parseFloat(bVal.replace(/,/g, "")) || 0;
+			}
+
+			return asc ? aVal - bVal : bVal - aVal;
+		});
+
+		// Re-append sorted rows & reset places (# column)
+		tbody.innerHTML = "";
+		rows.forEach((row, i) => {
+			row.cells[0].innerText = `#${i + 1}`;
+			tbody.appendChild(row);
+		});
+	}
 
   // ---------- Games Leaderboard ----------
   let gamesData = [];
@@ -245,20 +268,6 @@
       }
     });
     assignPlaces("gamesLeaderboard");
-  }
-
-  function sortGamesTable(colIndex) {
-    const table = document.getElementById("gamesLeaderboard");
-    const rows = Array.from(table.rows).slice(1);
-    const isNumeric = colIndex > 1 && colIndex <= 4;
-    rows.sort((a,b) => {
-      let aVal = a.cells[colIndex].innerText;
-      let bVal = b.cells[colIndex].innerText;
-      if (colIndex === 4) { aVal = parseHMS(aVal); bVal = parseHMS(bVal); }
-      else if (isNumeric) { aVal = parseFloat(aVal); bVal = parseFloat(bVal); }
-      return bVal - aVal;
-    });
-    rows.forEach((row,index) => { row.cells[0].innerText = `#${index+1}`; table.appendChild(row); });
   }
 
   // ---------- Clan Searching ----------
