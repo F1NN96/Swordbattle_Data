@@ -169,7 +169,7 @@
             method: "POST"
         });
 
-        console.log("FETCH URL:", url);
+        console.log("FETCH URL:", `https://swordbattle-data.onrender.com/stats/fetch?timeRange=${timeRange}&sortBy=xp`);
 
         const data = await res.json();
         const tbody = document.querySelector("#playersLeaderboard tbody");
@@ -214,7 +214,7 @@
     const timeRange = document.getElementById("gamesTimeRange").value;
     try {
       const res = await fetch(`https://swordbattle-data.onrender.com/games/fetch?timeRange=${timeRange}`, { method: "POST" });
-      console.log("FETCH URL:", url);
+      console.log("FETCH URL:", `https://swordbattle-data.onrender.com/games/fetch?timeRange=${timeRange}`);
       gamesData = await res.json();
       updateGamesLeaderboard();
     } catch(err) { console.error("Failed to load games:", err); }
@@ -278,8 +278,7 @@
         { method: "GET" }
       );
 
-      console.log("FETCH URL:", url);
-
+      console.log("FETCH URL:", `https://swordbattle-data.onrender.com/profile/clanMembers?clan=${encodeURIComponent(clan)}`);
       if (!res.ok) throw new Error("Request failed");
 
       const data = await res.json();
@@ -339,7 +338,7 @@ document.getElementById("playerSearchBtn").addEventListener("click", async () =>
             method: "POST",
             headers: { "Content-Type": "application/json" }
         });
-        console.log("FETCH URL:", url);
+        console.log("FETCH URL:", `https://swordbattle-data.onrender.com/profile/getPublicUserInfo/${encodeURIComponent(username)}`);
         if (!res.ok) throw new Error("API response not ok");
         const data = await res.json();
         const player = data.account || {};
