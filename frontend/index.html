@@ -262,52 +262,51 @@
   }
 
   // ---------- Clan Searching ----------
-  document.getElementById("clanSearchBtn").addEventListener("click", async () => {
-    const clan = document.getElementById("clanSearchInput").value.trim();
-    const tbody = document.querySelector("#clanLeaderboard tbody");
-    tbody.innerHTML = "";
+document.getElementById("clanSearchBtn").addEventListener("click", async () => {
+  const clan = document.getElementById("clanSearchInput").value.trim();
+  const tbody = document.querySelector("#clanLeaderboard tbody");
+  tbody.innerHTML = "";
 
-    if (!clan) {
-      tbody.innerHTML = "<tr><td colspan='6'>Enter a clan name.</td></tr>";
+  if (!clan) {
+    tbody.innerHTML = "<tr><td colspan='6'>Enter a clan name.</td></tr>";
+    return;
+  }
+
+  const url = `https://swordbattle-data.onrender.com/profile/clanMembers?clan=${encodeURIComponent(clan)}`;
+  console.log("FETCH URL:", url);
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+
+    const data = await res.json();
+    console.log("RAW clan response:", data);
+
+    // ✅ IMPORTANT: API returns an object, members is the array
+    if (!Array.isArray(data.members) || data.members.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='6'>No members found.</td></tr>";
       return;
     }
 
-    try {
-      const res = await fetch(
-        `https://swordbattle-data.onrender.com/profile/clanMembers?clan=${encodeURIComponent(clan)}`,
-        { method: "GET" }
-      );
+    data.members.forEach((player, index) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>#${index + 1}</td>
+        <td>${player.username}</td>
+        <td>${player.xp?.toLocaleString() ?? 0}</td>
+        <td>${player.kills ?? 0}</td>
+        <td>${player.coins ?? 0}</td>
+        <td>${formatHMS(player.playtime ?? 0)}</td>
+      `;
+      tbody.appendChild(row);
+    });
 
-      console.log("FETCH URL:", `https://swordbattle-data.onrender.com/profile/clanMembers?clan=${encodeURIComponent(clan)}`);
-      if (!res.ok) throw new Error("Request failed");
+  } catch (err) {
+    console.error("Clan fetch error:", err);
+    tbody.innerHTML = "<tr><td colspan='6'>Failed to load clan.</td></tr>";
+  }
+});
 
-      const data = await res.json();
-
-      if (!data.members || data.members.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='6'>No members found.</td></tr>";
-        return;
-      }
-
-      console.log("RAW clan reponse:", data);
-      console.log("Type:", typeof data, "Is array:", Array.isArray(data));
-
-      data.forEach((player, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>#${index + 1}</td>
-          <td>${player.username}</td>
-          <td>${player.xp || 0}</td>
-          <td>${player.kills || 0}</td>
-          <td>${player.coins || 0}</td>
-          <td>${formatHMS(player.playtime || 0)}</td>
-        `;
-        tbody.appendChild(row);
-      });
-    } catch (err) {
-      console.error(err);
-      tbody.innerHTML = "<tr><td colspan='6'>Failed to load clan.</td></tr>";
-    }
-  });
 
 
   // ---------- Helpers ----------
