@@ -283,7 +283,7 @@
 
       const data = await res.json();
 
-      if (!data || data.length === 0) {
+      if (!data.members || data.members.length === 0) {
         tbody.innerHTML = "<tr><td colspan='6'>No members found.</td></tr>";
         return;
       }
