@@ -137,7 +137,7 @@
       <tr>
         <th>Place</th>
         <th>Username</th>
-        <th>XP</th>
+        <th onclick="sortTable(2)">XP</th>
         <th>Kills</th>
         <th>Coins</th>
         <th>Playtime</th>
@@ -282,7 +282,7 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
     const data = await res.json();
     console.log("RAW clan response:", data);
 
-    // ✅ IMPORTANT: API returns an object, members is the array
+    // IMPORTANT: API returns an object, members is the array
     if (!Array.isArray(data.members) || data.members.length === 0) {
       tbody.innerHTML = "<tr><td colspan='6'>No members found.</td></tr>";
       return;
