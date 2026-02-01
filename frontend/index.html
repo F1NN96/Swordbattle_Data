@@ -17,6 +17,15 @@
   .tab-content { display: none; margin-top: 20px; }
   .tab-content.active { display: block; }
   .slider-container { margin-top: 10px; }
+  .sb-header {
+    text-align: center;
+    margin: 20px 0;
+  }
+
+  .sb-header img {
+    height: 80px;
+    image-rendering: crisp-edges;
+  }
 </style>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WS8WYQHC00"></script>
@@ -30,7 +39,9 @@
 
 </head>
 <body>
-
+<header class="sb-header">
+  <img src="/assets/Swordbattle_Logo.png" alt="Swordbattle.io" />
+</header>
 <h1>Swordbattle.io Leaderboards</h1>
 
 <!-- Tabs -->
@@ -317,6 +328,7 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
 });
 
 
+  //
 
   // ---------- Helpers ----------
   function assignPlaces(tableId) {
