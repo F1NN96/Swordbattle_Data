@@ -18,14 +18,15 @@
     position: relative;
     overflow-x: hidden;
   }
-  #background-cycle {
+  #background-cycle,
+  #background-cycle-2 {
     position: fixed;
     inset: 0;
     z-index: -2;
     background-size: cover;
     background-position: center;
     filter: saturate(1.1);
-    transition: opacity 1.5s ease-in-out;
+    transition: opacity 4s ease-in-out;
     opacity: 0;
   }
   #background-overlay {
@@ -90,6 +91,7 @@
   <img src="/assets/Swordbattle_Logo.png" alt="Swordbattle.io" />
 </header>
 <div id="background-cycle" aria-hidden="true"></div>
+<div id="background-cycle-2" aria-hidden="true"></div>
 <div id="background-overlay" aria-hidden="true"></div>
 <h1>Swordbattle.io Leaderboards</h1>
 
@@ -473,21 +475,28 @@ document.getElementById("playerSearchBtn").addEventListener("click", async () =>
     "/assets/Swordbattle_bg3.png"
   ];
   let currentBackground = 0;
-  const backgroundEl = document.getElementById("background-cycle");
+  const backgroundEls = [
+    document.getElementById("background-cycle"),
+    document.getElementById("background-cycle-2")
+  ];
+  let activeBg = 0;
  
   function cycleBackground() {
-    backgroundEl.style.opacity = "0";
-    setTimeout(() => {
-      currentBackground = (currentBackground + 1) % backgroundImages.length;
-      backgroundEl.style.backgroundImage = `url('${backgroundImages[currentBackground]}')`;
-      backgroundEl.style.opacity = "1";
-    }, 600);
+    const nextBg = 1 - activeBg;
+    currentBackground = (currentBackground + 1) % backgroundImages.length;
+
+    backgroundEls[nextBg].style.backgroundImage = `url('${backgroundImages[currentBackground]}')`;
+    backgroundEls[nextBg].style.opacity = "1";
+    backgroundEls[activeBg].style.opacity = "0";
+
+    activeBg = nextBg;
   }
 
   if (backgroundImages.length > 0) {
-    backgroundEl.style.backgroundImage = `url('${backgroundImages[0]}')`;
-    backgroundEl.style.opacity = "1";
-    setInterval(cycleBackground, 8000);
+    backgroundEls[0].style.backgroundImage = `url('${backgroundImages[0]}')`;
+    backgroundEls[0].style.opacity = "1";
+    backgroundEls[1].style.opacity = "0";
+    setInterval(cycleBackground, 16000);
   }
  
   loadPlayers();
