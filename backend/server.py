@@ -3,10 +3,16 @@ from starlette.responses import RedirectResponse
 import requests
 import time
 import os
+import json
+import threading
 from fastapi.middleware.cors import CORSMiddleware
 
 # Create FastAPI app
 app = FastAPI()
+
+# Shared clan leaderboard storage (file-based JSON)
+CLAN_TOTALS_PATH = os.path.join(os.path.dirname(__file__), "clan_totals.json")
+CLAN_TOTALS_LOCK = threading.Lock()
 
 # Make "SWORD_SECRET"
 secret = os.environ.get("SWORD_SECRET")
@@ -30,7 +36,9 @@ def root():
             "/stats/fetch",
             "/games/fetch",
             "/profile/search",
-            "/profile/getPublicUserInfo/{username}"
+            "/profile/getPublicUserInfo/{username}",
+            "/profile/clanMembers",
+            "/clans/leaderboard"
         ]
     }
 
@@ -114,11 +122,64 @@ def get_clan_members(clan: str = Query(...)):
 
     data = response.json()
 
+    members = [sanitize_member(m) for m in data.get("members", [])]
+    if members:
+        update_clan_totals(clan, members)
+
     return {
-        "count": data["count"],
-        "xp": data["xp"],
-        "members": [sanitize_member(m) for m in data["members"]]
+        "count": data.get("count", len(members)),
+        "xp": data.get("xp"),
+        "members": members
     }
+
+
+@app.get("/clans/leaderboard")
+def get_clan_leaderboard():
+    with CLAN_TOTALS_LOCK:
+        return {"clans": read_clan_totals()}
+
+
+def read_clan_totals():
+    if not os.path.exists(CLAN_TOTALS_PATH):
+        return {}
+    try:
+        with open(CLAN_TOTALS_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError) as err:
+        print("Failed to read clan totals:", err)
+        return {}
+
+
+def write_clan_totals(data):
+    tmp_path = f"{CLAN_TOTALS_PATH}.tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, sort_keys=True)
+        os.replace(tmp_path, CLAN_TOTALS_PATH)
+    except OSError as err:
+        print("Failed to write clan totals:", err)
+
+
+def update_clan_totals(clan_name, members):
+    clan_key = (clan_name or "").strip().lower()
+    if not clan_key:
+        return
+
+    total_xp = sum((m.get("xp") or 0) for m in members)
+    total_playtime = sum((m.get("playtime") or 0) for m in members)
+    member_count = len(members)
+
+    with CLAN_TOTALS_LOCK:
+        data = read_clan_totals()
+        data[clan_key] = {
+            "name": clan_name,
+            "xp": total_xp,
+            "playtime": total_playtime,
+            "members": member_count,
+            "updated_at": int(time.time())
+        }
+        write_clan_totals(data)
 
 
 
@@ -129,6 +190,7 @@ def sanitize_member(m):
         "username": m["username"],
         "clan": m["clan"],
         "xp": m["xp"],
+        "playtime": m.get("playtime", 0),
         "mastery": m["mastery"],
         "gems": m["gems"],
         "subscription": m["subscription"],

@@ -101,6 +101,7 @@
   <button class="tab-button" data-tab="gamesTab">Games</button>
   <button class="tab-button" data-tab="searchTab">Search Player</button>
   <button class="tab-button" data-tab="clanTab">Clan Search</button>
+  <button class="tab-button" data-tab="clanLeaderboardTab">Clan Leaderboard</button>
 </div>
 
 <!-- Players Tab -->
@@ -218,6 +219,27 @@
   </div>
 </div>
 
+<!-- Clan Leaderboard Tab -->
+<div id="clanLeaderboardTab" class="tab-content">
+  <p>Populated after you run clan searches.</p>
+  <div class="leaderboard-wrapper">
+    <img class="leaderboard-crown" src="/assets/crown.png" alt="Crown" />
+    <table id="clanXpLeaderboard">
+      <thead>
+        <tr>
+          <th>Place</th>
+          <th onclick="sortTable(1, 'clanXpLeaderboard')" style="cursor:pointer;">Clan</th>
+          <th onclick="sortTable(2, 'clanXpLeaderboard')" style="cursor:pointer;">Cumulative XP</th>
+          <th onclick="sortTable(3, 'clanXpLeaderboard')" style="cursor:pointer;">Members</th>
+          <th onclick="sortTable(4, 'clanXpLeaderboard')" style="cursor:pointer;">Avg XP</th>
+          <th onclick="sortTable(5, 'clanXpLeaderboard')" style="cursor:pointer;">Avg Playtime</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
 
 <script>
   // ---------- Tab switching ----------
@@ -266,28 +288,59 @@
 
   const tableSortState = {}; // remembers asc/desc per table & column
 
+	function detectColumnType(rows, colIndex) {
+		for (const row of rows) {
+			const cell = row.cells[colIndex];
+			if (!cell) continue;
+			const text = cell.innerText.trim();
+			if (!text) continue;
+
+			if (/^\d+h \d+m \d+s$/.test(text)) return "playtime";
+			if (/^-?[\d,.]+$/.test(text)) return "number";
+
+			const parsedDate = Date.parse(text);
+			if (!Number.isNaN(parsedDate)) return "date";
+
+			return "text";
+		}
+		return "text";
+	}
+
 	function sortTable(colIndex, tableId) {
 		const table = document.getElementById(tableId);
 		const tbody = table.tBodies[0];
 		const rows = Array.from(tbody.rows);
+		if (rows.length === 0) return;
 
 		// toggle sort direction per table + column
 		const key = `${tableId}-${colIndex}`;
 		tableSortState[key] = !tableSortState[key];
 		const asc = tableSortState[key];
 
-		rows.sort((a, b) => {
-			let aVal = a.cells[colIndex].innerText.trim();
-			let bVal = b.cells[colIndex].innerText.trim();
+		const columnType = detectColumnType(rows, colIndex);
 
-			// Playtime columns (assumes last column in table)
-			if (colIndex === rows[0].cells.length - 1) {
-				aVal = parseHMS(aVal);
-				bVal = parseHMS(bVal);
+		rows.sort((a, b) => {
+			const aText = a.cells[colIndex].innerText.trim();
+			const bText = b.cells[colIndex].innerText.trim();
+			let aVal = aText;
+			let bVal = bText;
+
+			if (columnType === "playtime") {
+				aVal = parseHMS(aText);
+				bVal = parseHMS(bText);
+			} else if (columnType === "number") {
+				aVal = parseFloat(aText.replace(/,/g, "")) || 0;
+				bVal = parseFloat(bText.replace(/,/g, "")) || 0;
+			} else if (columnType === "date") {
+				aVal = Date.parse(aText) || 0;
+				bVal = Date.parse(bText) || 0;
 			} else {
-				// Numeric conversion (XP, Coins, Kills)
-				aVal = parseFloat(aVal.replace(/,/g, "")) || 0;
-				bVal = parseFloat(bVal.replace(/,/g, "")) || 0;
+				aVal = aText.toLowerCase();
+				bVal = bText.toLowerCase();
+			}
+
+			if (columnType === "text") {
+				return asc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
 			}
 
 			return asc ? aVal - bVal : bVal - aVal;
@@ -299,6 +352,8 @@
 			row.cells[0].innerText = `#${i + 1}`;
 			tbody.appendChild(row);
 		});
+
+		assignPlaces(tableId);
 	}
 
   // ---------- Games Leaderboard ----------
@@ -341,6 +396,56 @@
     assignPlaces("gamesLeaderboard");
   }
 
+  // ---------- Clan XP Leaderboard ----------
+  let clanXpTotals = {};
+
+  async function fetchClanXpTotals() {
+    try {
+      const res = await fetch("https://swordbattle-data.onrender.com/clans/leaderboard");
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      const data = await res.json();
+      clanXpTotals = data.clans || {};
+    } catch (err) {
+      console.error("Failed to load clan leaderboard:", err);
+      clanXpTotals = {};
+    }
+
+    updateClanXpLeaderboard();
+  }
+
+  function updateClanXpLeaderboard() {
+    const tbody = document.querySelector("#clanXpLeaderboard tbody");
+    if (!tbody) return;
+
+    const rows = Object.values(clanXpTotals)
+      .filter(entry => entry && typeof entry === "object")
+      .sort((a, b) => (Number(b.xp) || 0) - (Number(a.xp) || 0));
+
+    tbody.innerHTML = "";
+    if (rows.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='6'>Search clans to build this leaderboard.</td></tr>";
+      return;
+    }
+
+    rows.forEach((entry, index) => {
+      const xpValue = Number(entry.xp) || 0;
+      const memberCount = Number(entry.members) || 0;
+      const totalPlaytime = Number(entry.playtime) || 0;
+      const avgXp = memberCount > 0 ? Math.round(xpValue / memberCount) : 0;
+      const avgPlaytime = memberCount > 0 ? Math.round(totalPlaytime / memberCount) : 0;
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>#${index + 1}</td>
+        <td>${entry.name || "Unknown"}</td>
+        <td>${xpValue.toLocaleString()}</td>
+        <td>${memberCount.toLocaleString()}</td>
+        <td>${avgXp.toLocaleString()}</td>
+        <td>${formatHMS(avgPlaytime)}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
   // ---------- Clan Searching ----------
 document.getElementById("clanSearchBtn").addEventListener("click", async () => {
   const clan = document.getElementById("clanSearchInput").value.trim();
@@ -367,6 +472,8 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
       tbody.innerHTML = "<tr><td colspan='6'>No members found.</td></tr>";
       return;
     }
+
+    await fetchClanXpTotals();
 
     data.members.forEach((player, index) => {
       const row = document.createElement("tr");
@@ -501,6 +608,7 @@ document.getElementById("playerSearchBtn").addEventListener("click", async () =>
  
   loadPlayers();
   loadGames();
+  fetchClanXpTotals();
 </script>
 </body>
 </html>
