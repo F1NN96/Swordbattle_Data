@@ -4,11 +4,45 @@
 <meta charset="UTF-8">
 <title>Swordbattle.io Leaderboards</title>
 <style>
+  :root {
+    --gold: #d4af37;
+    --silver: #c0c0c0;
+    --bronze: #cd7f32;
+  }
+  body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #eee;
+    padding: 20px;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+  #background-cycle {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background-size: cover;
+    background-position: center;
+    filter: saturate(1.1);
+    transition: opacity 1.5s ease-in-out;
+    opacity: 0;
+  }
+  #background-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(circle at top, rgba(0,0,0,0.45), rgba(0,0,0,0.85));
+    pointer-events: none;
+  }
   body { font-family: Arial, sans-serif; background: #111; color: #eee; padding: 20px; }
   table { border-collapse: collapse; width: 100%; margin-top: 20px; }
   th, td { border: 1px solid #444; padding: 8px; text-align: left; }
   th { background: #222; cursor: pointer; }
   tr:nth-child(even) { background: #1a1a1a; }
+  tr.rank-1 { background: rgba(212, 175, 55, 0.25); }
+  tr.rank-2 { background: rgba(192, 192, 192, 0.2); }
+  tr.rank-3 { background: rgba(205, 127, 50, 0.2); }
   select { margin-left: 20px; padding: 4px; }
   h1 { margin-top: 20px; }
   .tabs { margin-top: 20px; }
@@ -26,6 +60,19 @@
     height: 80px;
     image-rendering: crisp-edges;
   }
+  .leaderboard-wrapper {
+    position: relative;
+    padding-top: 10px;
+  }
+  .leaderboard-crown {
+    position: absolute; 
+    top: -18px;
+    left: -10px;
+    width: 54px;
+    height: auto;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6));
+    transform: rotate(-8deg);
+  }
 </style>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WS8WYQHC00"></script>
@@ -42,6 +89,8 @@
 <header class="sb-header">
   <img src="/assets/Swordbattle_Logo.png" alt="Swordbattle.io" />
 </header>
+<div id="background-cycle" aria-hidden="true"></div>
+<div id="background-overlay" aria-hidden="true"></div>
 <h1>Swordbattle.io Leaderboards</h1>
 
 <!-- Tabs -->
@@ -64,19 +113,22 @@
   </label>
 
   <p>*Click headers to sort leaderboard</p>
-  <table id="playersLeaderboard">
-	  <thead>
-		  <tr>
-			  <th>Place</th>
-			  <th onclick="sortTable(1, 'playersLeaderboard')" style="cursor:pointer;">Username</th>
-			  <th onclick="sortTable(2, 'playersLeaderboard')" style="cursor:pointer;">XP</th>
-			  <th onclick="sortTable(3, 'playersLeaderboard')" style="cursor:pointer;">Playtime</th>
-			  <th onclick="sortTable(4, 'playersLeaderboard')" style="cursor:pointer;">Coins</th>
-			  <th onclick="sortTable(5, 'playersLeaderboard')" style="cursor:pointer;">Kills</th>
-		  </tr>
-	  </thead>
+  <div class="leaderboard-wrapper">
+    <img class="leaderboard-crown" src="/assets/crown.png" alt="Crown" />
+    <table id="playersLeaderboard">
+	    <thead>
+		    <tr>
+			    <th>Place</th>
+			    <th onclick="sortTable(1, 'playersLeaderboard')" style="cursor:pointer;">Username</th>
+			    <th onclick="sortTable(2, 'playersLeaderboard')" style="cursor:pointer;">XP</th>
+			    <th onclick="sortTable(3, 'playersLeaderboard')" style="cursor:pointer;">Playtime</th>
+			    <th onclick="sortTable(4, 'playersLeaderboard')" style="cursor:pointer;">Coins</th>
+			    <th onclick="sortTable(5, 'playersLeaderboard')" style="cursor:pointer;">Kills</th>
+		    </tr>
+	    </thead>
 	  <tbody></tbody>
-  </table>
+    </table>
+  </div>
 </div>
 
 <!-- Games Tab -->
@@ -96,7 +148,9 @@
     <span>(11 = All Runs)</span>
   </div>
 
-  <table id="gamesLeaderboard">
+  <div class="leaderboard-wrapper">
+    <img class="leaderboard-crown" src="/assets/crown.png" alt="Crown" />
+    <table id="gamesLeaderboard">
 	  <thead>
 		  <tr>
 			  <th>Place</th>
@@ -108,7 +162,8 @@
 		  </tr>
 	  </thead>
 	  <tbody></tbody>
-  </table>
+    </table>
+  </div>
 </div>
 
 <!-- Search Player Tab -->
@@ -143,7 +198,9 @@
     <button id="clanSearchBtn">Search</button>
   </label>
 
-  <table id="clanLeaderboard">
+  <div class="leaderboard-wrapper">
+    <img class="leaderboard-crown" src="/assets/crown.png" alt="Crown" />
+    <table id="clanLeaderboard">
 	  <thead>
 		  <tr>
 		    <th>Place</th>
@@ -155,7 +212,8 @@
 		  </tr>
 	  </thead>
 	  <tbody></tbody>
-  </table>
+    </table>
+  </div>
 </div>
 
 
@@ -333,7 +391,13 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
   // ---------- Helpers ----------
   function assignPlaces(tableId) {
     const rows = document.querySelectorAll(`#${tableId} tbody tr`);
-    rows.forEach((row,index) => { row.cells[0].innerText = `#${index+1}`; });
+    rows.forEach((row,index) => {
+      row.cells[0].innerText = `#${index+1}`;
+      row.classList.remove("rank-1", "rank-2", "rank-3");
+      if (index === 0) row.classList.add("rank-1");
+      if (index === 1) row.classList.add("rank-2");
+      if (index === 2) row.classList.add("rank-3");
+    });
   }
 
   function formatHMS(seconds) {
@@ -403,6 +467,29 @@ document.getElementById("playerSearchBtn").addEventListener("click", async () =>
   });
 
   // Initial load
+  const backgroundImages = [
+    "/assets/Swordbattle_bg1.png",
+    "/assets/Swordbattle_bg2.png",
+    "/assets/Swordbattle_bg3.png"
+  ];
+  let currentBackground = 0;
+  const backgroundEl = document.getElementById("background-cycle");
+ 
+  function cycleBackground() {
+    backgroundEl.style.opacity = "0";
+    setTimeout(() => {
+      currentBackground = (currentBackground + 1) % backgroundImages.length;
+      backgroundEl.style.backgroundImage = `url('${backgroundImages[currentBackground]}')`;
+      backgroundEl.style.opacity = "1";
+    }, 600);
+  }
+
+  if (backgroundImages.length > 0) {
+    backgroundEl.style.backgroundImage = `url('${backgroundImages[0]}')`;
+    backgroundEl.style.opacity = "1";
+    setInterval(cycleBackground, 8000);
+  }
+ 
   loadPlayers();
   loadGames();
 </script>

@@ -121,6 +121,8 @@ def get_clan_members(clan: str = Query(...)):
     }
 
 
+
+
 def sanitize_member(m):
     return {
         "id": m["id"],
