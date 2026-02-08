@@ -3,16 +3,11 @@ from starlette.responses import RedirectResponse
 import requests
 import time
 import os
-import json
-import threading
 from fastapi.middleware.cors import CORSMiddleware
 
 # Create FastAPI app
 app = FastAPI()
 
-# Shared clan leaderboard storage (file-based JSON)
-CLAN_TOTALS_PATH = os.path.join(os.path.dirname(__file__), "clan_totals.json")
-CLAN_TOTALS_LOCK = threading.Lock()
 
 # Make "SWORD_SECRET"
 secret = os.environ.get("SWORD_SECRET")
@@ -41,6 +36,11 @@ def root():
             "/clans/leaderboard"
         ]
     }
+
+@app.get("/health")
+def health():
+    # Keep this endpoint fast and dependency-free so external pingers can warm the service.
+    return {"status": "ok"}
 
 
 # ---------- Players Stats ----------
@@ -135,54 +135,9 @@ def get_clan_members(clan: str = Query(...)):
 
 @app.get("/clans/leaderboard")
 def get_clan_leaderboard():
-    with CLAN_TOTALS_LOCK:
-        return {"clans": read_clan_totals()}
-
-
-def read_clan_totals():
-    if not os.path.exists(CLAN_TOTALS_PATH):
-        return {}
-    try:
-        with open(CLAN_TOTALS_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) else {}
-    except (OSError, json.JSONDecodeError) as err:
-        print("Failed to read clan totals:", err)
-        return {}
-
-
-def write_clan_totals(data):
-    tmp_path = f"{CLAN_TOTALS_PATH}.tmp"
-    try:
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, sort_keys=True)
-        os.replace(tmp_path, CLAN_TOTALS_PATH)
-    except OSError as err:
-        print("Failed to write clan totals:", err)
-
-
-def update_clan_totals(clan_name, members):
-    clan_key = (clan_name or "").strip().lower()
-    if not clan_key:
-        return
-
-    total_xp = sum((m.get("xp") or 0) for m in members)
-    total_playtime = sum((m.get("playtime") or 0) for m in members)
-    member_count = len(members)
-
-    with CLAN_TOTALS_LOCK:
-        data = read_clan_totals()
-        data[clan_key] = {
-            "name": clan_name,
-            "xp": total_xp,
-            "playtime": total_playtime,
-            "members": member_count,
-            "updated_at": int(time.time())
-        }
-        write_clan_totals(data)
-
-
-
+    url = "https://api.swordbattle.io/clans/leaderboard"
+    response = requests.get(url)
+    return response.json()
 
 def sanitize_member(m):
     return {

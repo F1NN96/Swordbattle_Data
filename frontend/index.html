@@ -74,6 +74,53 @@
     filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6));
     transform: rotate(-8deg);
   }
+  .music-controls {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0 20px;
+  }
+  .music-controls button {
+    background: #222;
+    color: #eee;
+    border: 1px solid #444;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+  .player-link {
+    background: none;
+    border: none;
+    color: #6bb7ff;
+    cursor: pointer;
+    padding: 0;
+    font: inherit;
+    text-decoration: underline;
+  }
+  .compare-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .compare-card {
+    background: #1a1a1a;
+    border: 1px solid #444;
+    padding: 12px;
+    border-radius: 8px;
+  }
+  .compare-card h3 {
+    margin-top: 0;
+  }
+  .compare-table {
+    width: 100%;
+    margin-top: 12px;
+  }
+  .compare-table th,
+  .compare-table td {
+    border: 1px solid #444;
+    padding: 6px 8px;
+  }
+  .delta-positive { color: #8be38b; }
+  .delta-negative { color: #ff7b7b; }
 </style>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WS8WYQHC00"></script>
@@ -90,6 +137,10 @@
 <header class="sb-header">
   <img src="/assets/Swordbattle_Logo.png" alt="Swordbattle.io" />
 </header>
+<div class="music-controls">
+  <button id="musicToggleBtn" type="button">Play Music</button>
+</div>
+<audio id="lobbyMusic" src="/assets/lobbymsc1.mp3" loop preload="auto"></audio>
 <div id="background-cycle" aria-hidden="true"></div>
 <div id="background-cycle-2" aria-hidden="true"></div>
 <div id="background-overlay" aria-hidden="true"></div>
@@ -100,6 +151,7 @@
   <button class="tab-button active" data-tab="playersTab">Players</button>
   <button class="tab-button" data-tab="gamesTab">Games</button>
   <button class="tab-button" data-tab="searchTab">Search Player</button>
+  <button class="tab-button" data-tab="compareTab">Compare Players</button>
   <button class="tab-button" data-tab="clanTab">Clan Search</button>
   <button class="tab-button" data-tab="clanLeaderboardTab">Clan Leaderboard</button>
 </div>
@@ -193,6 +245,18 @@
     }
 </style>
 
+<!-- Compare Players Tab -->
+<div id="compareTab" class="tab-content">
+  <label>Player A:
+    <input type="text" id="comparePlayerA" placeholder="Enter username">
+  </label>
+  <label style="margin-left: 10px;">Player B:
+    <input type="text" id="comparePlayerB" placeholder="Enter username">
+  </label>
+  <button id="compareBtn" type="button" style="margin-left: 10px;">Compare</button>
+  <div id="compareResults" style="margin-top: 20px;"></div>
+</div>
+
 <!-- Clan Search Tab -->
 <div id="clanTab" class="tab-content">
   <label>
@@ -245,13 +309,16 @@
   // ---------- Tab switching ----------
   const tabButtons = document.querySelectorAll(".tab-button");
   const tabContents = document.querySelectorAll(".tab-content");
+  function activateTab(tabId) {
+    tabButtons.forEach(b => b.classList.remove("active"));
+    tabContents.forEach(c => c.classList.remove("active"));
+    const btn = Array.from(tabButtons).find(b => b.dataset.tab === tabId);
+    if (btn) btn.classList.add("active");
+    const tab = document.getElementById(tabId);
+    if (tab) tab.classList.add("active");
+  }
   tabButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      tabButtons.forEach(b => b.classList.remove("active"));
-      tabContents.forEach(c => c.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById(btn.dataset.tab).classList.add("active");
-    });
+    btn.addEventListener("click", () => activateTab(btn.dataset.tab));
   });
 
   // ---------- Players Leaderboard ----------
@@ -271,7 +338,7 @@
             const row = document.createElement("tr");
             row.innerHTML = `
                 <td></td>
-                <td>${player.username}</td>
+                <td><button class="player-link" data-username="${player.username}">${player.username}</button></td>
                 <td>${player.xp}</td>
                 <td>${formatHMS(player.playtime)}</td>
                 <td>${player.coins}</td>
@@ -383,7 +450,7 @@
         const row = document.createElement("tr");
         row.innerHTML = `
           <td></td>
-          <td>${game.username}</td>
+          <td><button class="player-link" data-username="${game.username}">${game.username}</button></td>
           <td>${game.coins}</td>
           <td>${game.kills}</td>
           <td>${formatHMS(game.playtime)}</td>
@@ -479,7 +546,7 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
       const row = document.createElement("tr");
       row.innerHTML = `
         <td>#${index + 1}</td>
-        <td>${player.username}</td>
+        <td><button class="player-link" data-username="${player.username}">${player.username}</button></td>
         <td>${player.xp ?? 0}</td>
         <td>${player.gems ?? 0}</td>
         <td>${player.mastery ?? 0}</td>
@@ -522,50 +589,204 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
     return parseInt(match[1])*3600 + parseInt(match[2])*60 + parseInt(match[3]);
   }
 
-document.getElementById("playerSearchBtn").addEventListener("click", async () => {
-    const username = document.getElementById("playerSearchInput").value.trim();
+  async function fetchPlayerData(username) {
+    const res = await fetch(`https://swordbattle-data.onrender.com/profile/getPublicUserInfo/${encodeURIComponent(username)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    console.log("FETCH URL:", `https://swordbattle-data.onrender.com/profile/getPublicUserInfo/${encodeURIComponent(username)}`);
+    if (!res.ok) throw new Error("API response not ok");
+    const data = await res.json();
+    const player = data.account || {};
+    const stats = data.totalStats || {};
+    if (!player || !player.username) return null;
+    return { player, stats };
+  }
+
+  function renderPlayerCard(profile, options = {}) {
+    const player = profile.player || {};
+    const stats = profile.stats || {};
+    const showCompare = options.showCompare === true;
+    const skinsInfo = player.skins && player.skins.equipped
+      ? `<p><strong>Equipped Skin:</strong> ${player.skins.equipped}</p><p><strong>Owned Skins:</strong> ${player.skins.owned ? player.skins.owned.length : 0}</p>`
+      : "";
+    return `
+      <div class="player-card">
+        ${showCompare ? `<p><button class="compare-left-btn" data-username="${player.username}">Compare as Player A</button></p>` : ""}
+        <p><strong>Username:</strong> ${player.username || "N/A"}</p>
+        <p><strong>Clan:</strong> ${player.clan || "N/A"}</p>
+        <p><strong>XP:</strong> ${(stats.xp || 0).toLocaleString()}</p>
+        <p><strong>Mastery:</strong> ${(stats.mastery || 0).toLocaleString()}</p>
+        <p><strong>Coins:</strong> ${(stats.coins || 0).toLocaleString()}</p>
+        <p><strong>Kills:</strong> ${(stats.kills || 0).toLocaleString()}</p>
+        <p><strong>Games:</strong> ${(stats.games || 0).toLocaleString()}</p>
+        <p><strong>Playtime:</strong> ${formatHMS(stats.playtime || 0)}</p>
+        <p><strong>Gems:</strong> ${(player.gems || 0).toLocaleString()}</p>
+        <p><strong>Created At:</strong> ${player.created_at ? new Date(player.created_at).toLocaleString() : "N/A"}</p>
+        ${skinsInfo}
+      </div>
+    `;
+  }
+
+  async function runPlayerSearch(username) {
+    const display = document.getElementById("playerProfileDisplay");
     if (!username) {
-        document.getElementById("playerProfileDisplay").innerText = "Please enter a username.";
-        return;
+      display.innerText = "Please enter a username.";
+      return;
     }
-
     try {
-        const res = await fetch(`https://swordbattle-data.onrender.com/profile/getPublicUserInfo/${encodeURIComponent(username)}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" }
-        });
-        console.log("FETCH URL:", `https://swordbattle-data.onrender.com/profile/getPublicUserInfo/${encodeURIComponent(username)}`);
-        if (!res.ok) throw new Error("API response not ok");
-        const data = await res.json();
-        const player = data.account || {};
-        const stats = data.totalStats || {};
-        
-        if (!player || !player.username) {
-            document.getElementById("playerProfileDisplay").innerText = "Player not found.";
-            return;
-        }
-
-        const skinsInfo = player.skins && player.skins.equipped ? `<p><strong>Equipped Skin:</strong> ${player.skins.equipped}</p><p><strong>Owned Skins:</strong> ${player.skins.owned ? player.skins.owned.length : 0}</p>` : "";
-        document.getElementById("playerProfileDisplay").innerHTML = `
-            <div class="player-card">
-                <p><strong>Username:</strong> ${player.username || "N/A"}</p>
-                <p><strong>Clan:</strong> ${player.clan || "N/A"}</p>
-                <p><strong>XP:</strong> ${stats.xp || 0}</p>
-                <p><strong>Mastery:</strong> ${stats.mastery || 0}</p>
-                <p><strong>Coins:</strong> ${stats.coins || 0}</p>
-                <p><strong>Kills:</strong> ${stats.kills || 0}</p>
-                <p><strong>Games:</strong> ${stats.games || 0}</p>
-                <p><strong>Playtime:</strong> ${formatHMS(stats.playtime || 0)}</p>
-                <p><strong>Gems:</strong> ${player.gems || 0}</p>
-                <p><strong>Created At:</strong> ${player.created_at ? new Date(player.created_at).toLocaleString() : "N/A"}</p>
-                ${skinsInfo}
-            </div>
-        `;
-    } catch(err) {
-        console.error(err);
-        document.getElementById("playerProfileDisplay").innerText = "Failed to load profile. Please try again.";
+      const profile = await fetchPlayerData(username);
+      if (!profile) {
+        display.innerText = "Player not found.";
+        return;
+      }
+      display.innerHTML = renderPlayerCard(profile, { showCompare: true });
+    } catch (err) {
+      console.error(err);
+      display.innerText = "Failed to load profile. Please try again.";
     }
-});
+  }
+
+  document.getElementById("playerSearchBtn").addEventListener("click", async () => {
+    const username = document.getElementById("playerSearchInput").value.trim();
+    await runPlayerSearch(username);
+  });
+
+  async function comparePlayers() {
+    const aName = document.getElementById("comparePlayerA").value.trim();
+    const bName = document.getElementById("comparePlayerB").value.trim();
+    const results = document.getElementById("compareResults");
+    if (!aName || !bName) {
+      results.innerText = "Enter two usernames to compare.";
+      return;
+    }
+    results.innerText = "Loading comparison...";
+    try {
+      const [aProfile, bProfile] = await Promise.all([
+        fetchPlayerData(aName),
+        fetchPlayerData(bName)
+      ]);
+      if (!aProfile || !bProfile) {
+        results.innerText = "One or both players not found.";
+        return;
+      }
+
+      const aStats = aProfile.stats || {};
+      const bStats = bProfile.stats || {};
+      const rows = [
+        { label: "XP", a: aStats.xp || 0, b: bStats.xp || 0, fmt: v => v.toLocaleString() },
+        { label: "Playtime", a: aStats.playtime || 0, b: bStats.playtime || 0, fmt: v => formatHMS(v) },
+        { label: "Coins", a: aStats.coins || 0, b: bStats.coins || 0, fmt: v => v.toLocaleString() },
+        { label: "Kills", a: aStats.kills || 0, b: bStats.kills || 0, fmt: v => v.toLocaleString() },
+        { label: "Games", a: aStats.games || 0, b: bStats.games || 0, fmt: v => v.toLocaleString() },
+        { label: "Mastery", a: aStats.mastery || 0, b: bStats.mastery || 0, fmt: v => v.toLocaleString() },
+        { label: "Gems", a: aProfile.player.gems || 0, b: bProfile.player.gems || 0, fmt: v => v.toLocaleString() }
+      ];
+
+      const tableRows = rows.map(r => {
+        const delta = r.a - r.b;
+        const deltaClass = delta > 0 ? "delta-positive" : (delta < 0 ? "delta-negative" : "");
+        const deltaText = delta === 0 ? "0" : (delta > 0 ? `+${r.fmt(delta)}` : r.fmt(delta));
+        return `
+          <tr>
+            <td>${r.label}</td>
+            <td>${r.fmt(r.a)}</td>
+            <td>${r.fmt(r.b)}</td>
+            <td class="${deltaClass}">${deltaText}</td>
+          </tr>
+        `;
+      }).join("");
+
+      results.innerHTML = `
+        <div class="compare-grid">
+          <div class="compare-card">
+            <h3>${aProfile.player.username}</h3>
+            ${renderPlayerCard(aProfile)}
+          </div>
+          <div class="compare-card">
+            <h3>${bProfile.player.username}</h3>
+            ${renderPlayerCard(bProfile)}
+          </div>
+        </div>
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Stat</th>
+              <th>${aProfile.player.username}</th>
+              <th>${bProfile.player.username}</th>
+              <th>Delta (A - B)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      `;
+    } catch (err) {
+      console.error(err);
+      results.innerText = "Failed to load comparison.";
+    }
+  }
+
+  document.getElementById("compareBtn").addEventListener("click", comparePlayers);
+
+  // ---------- Leaderboard username -> profile ----------
+  function handlePlayerLinkClick(event) {
+    const target = event.target.closest(".player-link");
+    if (!target) return;
+    const username = target.dataset.username;
+    if (!username) return;
+    document.getElementById("playerSearchInput").value = username;
+    activateTab("searchTab");
+    runPlayerSearch(username);
+  }
+  document.getElementById("playersLeaderboard").addEventListener("click", handlePlayerLinkClick);
+  document.getElementById("gamesLeaderboard").addEventListener("click", handlePlayerLinkClick);
+  document.getElementById("clanLeaderboard").addEventListener("click", handlePlayerLinkClick);
+
+  // ---------- Search tab -> compare shortcut ----------
+  document.getElementById("playerProfileDisplay").addEventListener("click", (event) => {
+    const target = event.target.closest(".compare-left-btn");
+    if (!target) return;
+    const username = target.dataset.username;
+    if (!username) return;
+    document.getElementById("comparePlayerA").value = username;
+    activateTab("compareTab");
+    document.getElementById("comparePlayerB").focus();
+  });
+
+  // ---------- Lobby Music ----------
+  const lobbyMusic = document.getElementById("lobbyMusic");
+  const musicToggleBtn = document.getElementById("musicToggleBtn");
+  let musicReady = false;
+
+  function updateMusicButton() {
+    if (!musicToggleBtn) return;
+    musicToggleBtn.innerText = lobbyMusic && !lobbyMusic.paused ? "Pause Music" : "Play Music";
+  }
+
+  if (musicToggleBtn && lobbyMusic) {
+    musicToggleBtn.addEventListener("click", async () => {
+      try {
+        if (lobbyMusic.paused) {
+          if (!musicReady) {
+            await lobbyMusic.play();
+            musicReady = true;
+          } else {
+            await lobbyMusic.play();
+          }
+        } else {
+          lobbyMusic.pause();
+        }
+      } catch (err) {
+        console.error("Music play failed:", err);
+      }
+      updateMusicButton();
+    });
+
+    lobbyMusic.addEventListener("play", updateMusicButton);
+    lobbyMusic.addEventListener("pause", updateMusicButton);
+  }
 
   // ---------- Event listeners ----------
   document.getElementById("playersTimeRange").addEventListener("change", loadPlayers);
