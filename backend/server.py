@@ -123,8 +123,6 @@ def get_clan_members(clan: str = Query(...)):
     data = response.json()
 
     members = [sanitize_member(m) for m in data.get("members", [])]
-    if members:
-        update_clan_totals(clan, members)
 
     return {
         "count": data.get("count", len(members)),

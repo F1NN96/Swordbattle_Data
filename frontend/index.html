@@ -36,19 +36,30 @@
     background: radial-gradient(circle at top, rgba(0,0,0,0.45), rgba(0,0,0,0.85));
     pointer-events: none;
   }
-  body { font-family: Arial, sans-serif; background: #111; color: #eee; padding: 20px; }
-  table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-  th, td { border: 1px solid #444; padding: 8px; text-align: left; }
-  th { background: #222; cursor: pointer; }
-  tr:nth-child(even) { background: #1a1a1a; }
+  body { font-family: "Trebuchet MS", Arial, sans-serif; background: #111; color: #eee; padding: 20px; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; margin-top: 20px; border-radius: 14px; overflow: hidden; }
+  th, td { border: 1px solid #333; padding: 10px 12px; text-align: left; }
+  th { background: #1f1f1f; cursor: pointer; }
+  tr:nth-child(even) { background: #181818; }
   tr.rank-1 { background: rgba(212, 175, 55, 0.25); }
   tr.rank-2 { background: rgba(192, 192, 192, 0.2); }
   tr.rank-3 { background: rgba(205, 127, 50, 0.2); }
   select { margin-left: 20px; padding: 4px; }
   h1 { margin-top: 20px; }
   .tabs { margin-top: 20px; }
-  .tab-button { background: #222; color: #eee; border: none; padding: 10px 20px; cursor: pointer; margin-right: 5px; }
-  .tab-button.active { background: #555; }
+  .tab-button {
+    background: #222;
+    color: #eee;
+    border: 1px solid #333;
+    padding: 10px 18px;
+    cursor: pointer;
+    margin-right: 6px;
+    border-radius: 999px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .tab-button:hover { transform: translateY(-1px); background: #2a2a2a; }
+  .tab-button.active { background: #3a3a3a; }
   .tab-content { display: none; margin-top: 20px; }
   .tab-content.active { display: block; }
   .slider-container { margin-top: 10px; }
@@ -63,7 +74,11 @@
   }
   .leaderboard-wrapper {
     position: relative;
-    padding-top: 10px;
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(20,20,20,0.85);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+    margin-bottom: 16px;
   }
   .leaderboard-crown {
     position: absolute; 
@@ -82,9 +97,11 @@
   .music-controls button {
     background: #222;
     color: #eee;
-    border: 1px solid #444;
+    border: 1px solid #333;
     padding: 8px 16px;
     cursor: pointer;
+    border-radius: 999px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.4);
   }
   .player-link {
     background: none;
@@ -105,7 +122,8 @@
     background: #1a1a1a;
     border: 1px solid #444;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: 16px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.35);
   }
   .compare-card h3 {
     margin-top: 0;
@@ -121,6 +139,38 @@
   }
   .delta-positive { color: #8be38b; }
   .delta-negative { color: #ff7b7b; }
+  .sticky-nav {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: rgba(10, 10, 10, 0.9);
+    border: 1px solid #2a2a2a;
+    padding: 10px;
+    margin: 10px 0 16px;
+    backdrop-filter: blur(6px);
+    border-radius: 16px;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.45);
+  }
+  .sticky-nav .tab-button {
+    margin: 4px 6px 4px 0;
+  }
+  input, select, button {
+    border-radius: 999px;
+  }
+  input, select {
+    background: #1a1a1a;
+    color: #eee;
+    border: 1px solid #333;
+    padding: 6px 10px;
+  }
+  button {
+    background: #242424;
+    border: 1px solid #333;
+    color: #eee;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  button:hover { background: #2c2c2c; }
 </style>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WS8WYQHC00"></script>
@@ -147,8 +197,9 @@
 <h1>Swordbattle.io Leaderboards</h1>
 
 <!-- Tabs -->
-<div class="tabs">
-  <button class="tab-button active" data-tab="playersTab">Players</button>
+<div class="tabs sticky-nav">
+  <button class="tab-button active" data-tab="homeTab">Home</button>
+  <button class="tab-button" data-tab="playersTab">Players</button>
   <button class="tab-button" data-tab="gamesTab">Games</button>
   <button class="tab-button" data-tab="searchTab">Search Player</button>
   <button class="tab-button" data-tab="compareTab">Compare Players</button>
@@ -156,8 +207,58 @@
   <button class="tab-button" data-tab="clanLeaderboardTab">Clan Leaderboard</button>
 </div>
 
+<!-- Home Tab -->
+<div id="homeTab" class="tab-content active">
+  <p>Quick snapshots of the top players, clans, and games.</p>
+  <div class="leaderboard-wrapper">
+    <img class="leaderboard-crown" src="/assets/crown.png" alt="Crown" />
+    <h2>Top 10 Players (XP)</h2>
+    <table id="homePlayersLeaderboard">
+      <thead>
+        <tr>
+          <th>Place</th>
+          <th>Username</th>
+          <th>XP</th>
+          <th>Playtime</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="leaderboard-wrapper">
+    <img class="leaderboard-crown" src="/assets/crown.png" alt="Crown" />
+    <h2>Top 10 Clans (XP)</h2>
+    <table id="homeClansLeaderboard">
+      <thead>
+        <tr>
+          <th>Place</th>
+          <th>Clan</th>
+          <th>Cumulative XP</th>
+          <th>Members</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="leaderboard-wrapper">
+    <img class="leaderboard-crown" src="/assets/crown.png" alt="Crown" />
+    <h2>Top 10 Games (Coins)</h2>
+    <table id="homeGamesLeaderboard">
+      <thead>
+        <tr>
+          <th>Place</th>
+          <th>Username</th>
+          <th>Coins</th>
+          <th>Kills</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
 <!-- Players Tab -->
-<div id="playersTab" class="tab-content active">
+<div id="playersTab" class="tab-content">
   <label>Time Range:
     <select id="playersTimeRange">
       <option value="all">All Time</option>
@@ -306,6 +407,9 @@
 
 
 <script>
+  const API_BASE = "https://swordbattle-data.onrender.com";
+  const WARMUP_MESSAGE = "The backend is warming up. Please wait a few seconds...";
+
   // ---------- Tab switching ----------
   const tabButtons = document.querySelectorAll(".tab-button");
   const tabContents = document.querySelectorAll(".tab-content");
@@ -324,15 +428,16 @@
   // ---------- Players Leaderboard ----------
   async function loadPlayers() {
     const timeRange = document.getElementById("playersTimeRange").value;
+    const tbody = document.querySelector("#playersLeaderboard tbody");
+    tbody.innerHTML = `<tr><td colspan="6">${WARMUP_MESSAGE}</td></tr>`;
     try {
-        const res = await fetch(`https://swordbattle-data.onrender.com/stats/fetch?timeRange=${timeRange}&sortBy=xp`, {
+        const res = await fetch(`${API_BASE}/stats/fetch?timeRange=${timeRange}&sortBy=xp`, {
             method: "POST"
         });
 
-        console.log("FETCH URL:", `https://swordbattle-data.onrender.com/stats/fetch?timeRange=${timeRange}&sortBy=xp`);
+        console.log("FETCH URL:", `${API_BASE}/stats/fetch?timeRange=${timeRange}&sortBy=xp`);
 
         const data = await res.json();
-        const tbody = document.querySelector("#playersLeaderboard tbody");
         tbody.innerHTML = "";
         data.forEach(player => {
             const row = document.createElement("tr");
@@ -349,6 +454,31 @@
         assignPlaces("playersLeaderboard");
     } catch(err) {
         console.error("Failed to load players:", err);
+        tbody.innerHTML = `<tr><td colspan="6">Failed to load players.</td></tr>`;
+    }
+  }
+
+  async function loadHomePlayers() {
+    const tbody = document.querySelector("#homePlayersLeaderboard tbody");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="4">${WARMUP_MESSAGE}</td></tr>`;
+    try {
+      const res = await fetch(`${API_BASE}/stats/fetch?timeRange=all&sortBy=xp`, { method: "POST" });
+      const data = await res.json();
+      tbody.innerHTML = "";
+      data.slice(0, 10).forEach((player, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>#${index + 1}</td>
+          <td><button class="player-link" data-username="${player.username}">${player.username}</button></td>
+          <td>${(player.xp || 0).toLocaleString()}</td>
+          <td>${formatHMS(player.playtime || 0)}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    } catch (err) {
+      console.error("Failed to load home players:", err);
+      tbody.innerHTML = `<tr><td colspan="4">Failed to load players.</td></tr>`;
     }
   }
 
@@ -428,9 +558,11 @@
 
   async function loadGames() {
     const timeRange = document.getElementById("gamesTimeRange").value;
+    const tbody = document.querySelector("#gamesLeaderboard tbody");
+    tbody.innerHTML = `<tr><td colspan="6">${WARMUP_MESSAGE}</td></tr>`;
     try {
-      const res = await fetch(`https://swordbattle-data.onrender.com/games/fetch?timeRange=${timeRange}`, { method: "POST" });
-      console.log("FETCH URL:", `https://swordbattle-data.onrender.com/games/fetch?timeRange=${timeRange}`);
+      const res = await fetch(`${API_BASE}/games/fetch?timeRange=${timeRange}`, { method: "POST" });
+      console.log("FETCH URL:", `${API_BASE}/games/fetch?timeRange=${timeRange}`);
       gamesData = await res.json();
       updateGamesLeaderboard();
     } catch(err) { console.error("Failed to load games:", err); }
@@ -463,12 +595,42 @@
     assignPlaces("gamesLeaderboard");
   }
 
+  async function loadHomeGames() {
+    const tbody = document.querySelector("#homeGamesLeaderboard tbody");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="4">${WARMUP_MESSAGE}</td></tr>`;
+    try {
+      const res = await fetch(`${API_BASE}/games/fetch?timeRange=all`, { method: "POST" });
+      const data = await res.json();
+      const top = data
+        .slice()
+        .sort((a, b) => (Number(b.coins) || 0) - (Number(a.coins) || 0))
+        .slice(0, 10);
+      tbody.innerHTML = "";
+      top.forEach((game, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>#${index + 1}</td>
+          <td><button class="player-link" data-username="${game.username}">${game.username}</button></td>
+          <td>${(game.coins || 0).toLocaleString()}</td>
+          <td>${(game.kills || 0).toLocaleString()}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    } catch (err) {
+      console.error("Failed to load home games:", err);
+      tbody.innerHTML = `<tr><td colspan="4">Failed to load games.</td></tr>`;
+    }
+  }
+
   // ---------- Clan XP Leaderboard ----------
   let clanXpTotals = {};
 
   async function fetchClanXpTotals() {
+    const tbody = document.querySelector("#clanXpLeaderboard tbody");
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6">${WARMUP_MESSAGE}</td></tr>`;
     try {
-      const res = await fetch("https://swordbattle-data.onrender.com/clans/leaderboard");
+      const res = await fetch(`${API_BASE}/clans/leaderboard`);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const data = await res.json();
       clanXpTotals = data.clans || {};
@@ -478,6 +640,7 @@
     }
 
     updateClanXpLeaderboard();
+    updateHomeClansLeaderboard();
   }
 
   function updateClanXpLeaderboard() {
@@ -513,6 +676,34 @@
     });
   }
 
+  function updateHomeClansLeaderboard() {
+    const tbody = document.querySelector("#homeClansLeaderboard tbody");
+    if (!tbody) return;
+    const rows = Object.values(clanXpTotals)
+      .filter(entry => entry && typeof entry === "object")
+      .sort((a, b) => (Number(b.xp) || 0) - (Number(a.xp) || 0))
+      .slice(0, 10);
+
+    tbody.innerHTML = "";
+    if (rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4">${WARMUP_MESSAGE}</td></tr>`;
+      return;
+    }
+
+    rows.forEach((entry, index) => {
+      const xpValue = Number(entry.xp) || 0;
+      const memberCount = Number(entry.members) || 0;
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>#${index + 1}</td>
+        <td>${entry.name || "Unknown"}</td>
+        <td>${xpValue.toLocaleString()}</td>
+        <td>${memberCount.toLocaleString()}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
   // ---------- Clan Searching ----------
 document.getElementById("clanSearchBtn").addEventListener("click", async () => {
   const clan = document.getElementById("clanSearchInput").value.trim();
@@ -528,7 +719,7 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
   console.log("FETCH URL:", url);
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(`${API_BASE}/profile/clanMembers?clan=${encodeURIComponent(clan)}`);
     if (!res.ok) throw new Error(`Request failed: ${res.status}`);
 
     const data = await res.json();
@@ -590,11 +781,11 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
   }
 
   async function fetchPlayerData(username) {
-    const res = await fetch(`https://swordbattle-data.onrender.com/profile/getPublicUserInfo/${encodeURIComponent(username)}`, {
+    const res = await fetch(`${API_BASE}/profile/getPublicUserInfo/${encodeURIComponent(username)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" }
     });
-    console.log("FETCH URL:", `https://swordbattle-data.onrender.com/profile/getPublicUserInfo/${encodeURIComponent(username)}`);
+    console.log("FETCH URL:", `${API_BASE}/profile/getPublicUserInfo/${encodeURIComponent(username)}`);
     if (!res.ok) throw new Error("API response not ok");
     const data = await res.json();
     const player = data.account || {};
@@ -631,9 +822,10 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
   async function runPlayerSearch(username) {
     const display = document.getElementById("playerProfileDisplay");
     if (!username) {
-      display.innerText = "Please enter a username.";
-      return;
+        display.innerText = "Please enter a username.";
+        return;
     }
+    display.innerText = WARMUP_MESSAGE;
     try {
       const profile = await fetchPlayerData(username);
       if (!profile) {
@@ -743,6 +935,8 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
   document.getElementById("playersLeaderboard").addEventListener("click", handlePlayerLinkClick);
   document.getElementById("gamesLeaderboard").addEventListener("click", handlePlayerLinkClick);
   document.getElementById("clanLeaderboard").addEventListener("click", handlePlayerLinkClick);
+  document.getElementById("homePlayersLeaderboard").addEventListener("click", handlePlayerLinkClick);
+  document.getElementById("homeGamesLeaderboard").addEventListener("click", handlePlayerLinkClick);
 
   // ---------- Search tab -> compare shortcut ----------
   document.getElementById("playerProfileDisplay").addEventListener("click", (event) => {
@@ -826,10 +1020,19 @@ document.getElementById("clanSearchBtn").addEventListener("click", async () => {
     backgroundEls[1].style.opacity = "0";
     setInterval(cycleBackground, 16000);
   }
+
+  // ---------- Backend warmup ping ----------
+  function pingBackend() {
+    fetch(API_BASE, { method: "GET", mode: "no-cors" }).catch(() => {});
+  }
+  pingBackend();
+  setInterval(pingBackend, 14 * 60 * 1000);
  
   loadPlayers();
   loadGames();
   fetchClanXpTotals();
+  loadHomePlayers();
+  loadHomeGames();
 </script>
 </body>
 </html>
